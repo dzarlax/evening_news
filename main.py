@@ -52,7 +52,7 @@ def process_titles_with_gpt(titles_text):
             {"role": "system", "content": "Ты ассистент руководителя"},
             {"role": "user", "content": prompt_text},
         ],
-        max_tokens=1024
+        max_tokens=4096
     )
 
     # Проверьте, является ли 'response' словарём или объектом
