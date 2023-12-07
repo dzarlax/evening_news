@@ -81,6 +81,7 @@ def send_telegram_message(message):
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
         "parse_mode": "MarkdownV2",
+        "disable_web_page_preview": "true",
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message
     }
