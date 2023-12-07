@@ -38,18 +38,25 @@ def fetch_news_titles(url):
         pub_date = datetime.datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z').date()
         if pub_date == today:
             title = item.find('title').text
-            titles_today.append(title)
+            link = item.find('link').text
+            titles_today.append((title, link))
 
-    titles_text = ' '.join(titles_today)
+    titles_text = ' ;'.join([f"Заголовок: {title}, Ссылка: {link}" for title, link in titles_today])
     return titles_text
 
 
 def process_titles_with_gpt(titles_text):
-    prompt_text = f"Обобщите заголовки этих новостей на русском в короткий бюллетень, разделив каждый пункт новой строкой:\n{titles_text}"
+    prompt_text = (
+            "Обобщите заголовки следующих новостей, представив их в виде короткого бюллетеня. "
+            "Используйте новую строку для каждого пункта. Для новостей на похожие темы, "
+            "пожалуйста, сгруппируйте ссылки рядом с соответствующими заголовками. "
+            "Отформатируй итоговый текст в Markdown"
+            "Вот пары заголовков и ссылок:" + titles_text
+    )
     response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
-        model="gpt-3.5-turbo-1106",
+        model="gpt-4-0613",
         messages=[
-            {"role": "system", "content": "Ты ассистент руководителя"},
+            {"role": "system", "content": "Ты ассистент русскоязычного руководителя"},
             {"role": "user", "content": prompt_text},
         ],
         max_tokens=4096
@@ -73,18 +80,34 @@ def send_telegram_message(message):
     TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
+        "parse_mode": "MarkdownV2",
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message
     }
-    response = requests.post(send_message_url, data=data)
+    try:
+        response = requests.post(send_message_url, data=data)
+        response.raise_for_status()  # Вызывает исключение для неудачных HTTP-запросов
+        if response.status_code == 200:
+            print("Сообщение успешно отправлено")
+        else:
+            print(f"Ошибка при отправке сообщения: {response.status_code}")
+    except requests.RequestException as e:
+        print(f"Произошла ошибка при отправке сообщения: {e}")
+
     return response.json()
+
+def escape_markdown(text):
+    escape_chars = '_~`>#+-=|{}.!'
+    return ''.join(['\\' + char if char in escape_chars else char for char in text])
+
 
 
 def job():
     url = load_config("feed_url")
     today_titles = fetch_news_titles(url)
     summary = process_titles_with_gpt(today_titles)
-    send_telegram_message(summary)
     print(summary)
+    escaped_message = escape_markdown(summary)
+    send_telegram_message(escaped_message)
 
 job()
