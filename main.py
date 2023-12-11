@@ -7,6 +7,8 @@ import os
 import json
 from typing import Optional
 
+text_chat_id = 388128
+
 def load_config(key: Optional[str] = None):
     # Получение абсолютного пути к директории, где находится main.py
     current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -51,6 +53,7 @@ def process_titles_with_gpt(titles_text):
             "Используйте новую строку для каждого пункта. Для новостей на похожие темы, "
             "пожалуйста, сгруппируйте ссылки рядом с соответствующими заголовками. "
             "Отформатируй итоговый текст в Markdown для отправки в Telegram"
+            "Поддерживается такой синтаксис *bold \*text* _italic \*text_ __underline__ ~strikethrough~ ||spoiler|| *bold _italic bold ~italic bold strikethrough ||italic bold strikethrough spoiler||~ __underline italic bold___ bold* [inline URL](http://www.example.com/)"
             "Вот пары заголовков и ссылок:" + titles_text
     )
     response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
@@ -77,6 +80,7 @@ def send_telegram_message(message):
     TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
     TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
+    #TELEGRAM_CHAT_ID = 388128
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
         "parse_mode": "MarkdownV2",
