@@ -73,13 +73,21 @@ def process_titles_with_gpt(titles_text):
     print(summary)
     return summary
 
+def send_error(message):
+    TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
+    send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message
+    }
+    response = requests.post(send_message_url, data=data)
 
 def send_telegram_message(message):
     # Place your Telegram bot's API token here
     TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
-    #TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
-    TELEGRAM_CHAT_ID = 388128
+    TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
         "parse_mode": "HTML",
@@ -92,18 +100,13 @@ def send_telegram_message(message):
         response = requests.post(send_message_url, data=data)
         response.raise_for_status()  # Вызывает исключение для неудачных HTTP-запросов
         if response.status_code == 200:
-            print("Сообщение успешно отправлено")
+            send_error("Сообщение успешно отправлено")
         else:
-            print(f"Ошибка при отправке сообщения: {response.status_code}")
+            send_error(f"Ошибка при отправке сообщения: {response.status_code}")
     except requests.RequestException as e:
-        print(f"Произошла ошибка при отправке сообщения: {e}")
-
+        send_error(f"Произошла ошибка при отправке сообщения: {e}")
+    send_error(response.json())
     return response.json()
-
-def escape_markdown(text):
-    escape_chars = '_~`>#+-=|{}.!'
-    return ''.join(['\\' + char if char in escape_chars else char for char in text])
-
 
 
 def job():
@@ -111,7 +114,5 @@ def job():
     today_titles = fetch_news_titles(url)
     summary = process_titles_with_gpt(today_titles)
     print(summary)
-    escaped_message = escape_markdown(summary)
-    #send_telegram_message(escaped_message)
     send_telegram_message(summary)
 job()
