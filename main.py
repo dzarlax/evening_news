@@ -6,6 +6,7 @@ from openai import OpenAI
 import os
 import json
 from typing import Optional
+from bs4 import BeautifulSoup
 
 text_chat_id = 388128
 
@@ -88,6 +89,7 @@ def send_telegram_message(message):
     TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
     TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
+    #TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
         "parse_mode": "HTML",
@@ -108,11 +110,27 @@ def send_telegram_message(message):
     send_error(response.json())
     return response.json()
 
+def clean_html(html):
+    # Разбираем HTML
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Разрешенные теги
+    allowed_tags = ['b', 'i', 'a', 'code']
+
+    # Удаляем все теги, кроме разрешенных
+    for tag in soup.find_all():
+        if tag.name not in allowed_tags:
+            tag.unwrap()
+
+    # Возвращаем "очищенный" HTML
+    return str(soup)
+
 
 def job():
     url = load_config("feed_url")
     today_titles = fetch_news_titles(url)
     summary = process_titles_with_gpt(today_titles)
     print(summary)
-    send_telegram_message(summary)
+    cleaned_html = clean_html(summary)
+    send_telegram_message(cleaned_html)
 job()
