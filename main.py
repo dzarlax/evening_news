@@ -52,7 +52,10 @@ def process_titles_with_gpt(titles_text):
     prompt_text = (
             "Обобщите заголовки следующих новостей, представив их в виде короткого бюллетеня. "
             "Используйте новую строку для каждого пункта. Для новостей на похожие темы, "
-            "пожалуйста, сгруппируйте ссылки рядом с соответствующими заголовками. "
+            "пожалуйста, сгруппируйте ссылки рядом с соответствующими заголовками под кнопкой ссылка "
+            "В начало каждой ссылки нужно добавить https://dzarlax.dev/rss/articles/article.html?link="
+            "Ссылку нужно спрятать под кнопку"
+            "Заголовок не должен быть кликабельным"
             "Отформатируй итоговый текст в HTML можно использовать только теги <b>, <i>, <a>,<code> "
             "Вот пары заголовков и ссылок:" + titles_text
     )
@@ -88,8 +91,8 @@ def send_telegram_message(message):
     # Place your Telegram bot's API token here
     TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
-    TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
-    #TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
+    #TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
+    TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
         "parse_mode": "HTML",
