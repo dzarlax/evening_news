@@ -3,12 +3,24 @@ name: SSH Remote Pull
 on:
   push:
     branches:
-      - main  # Или другая ветка, которую вы хотите отслеживать
+      - main
 
 jobs:
   pull:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PASS }}" > ~/.ssh/passphrase
+        chmod 600 ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/passphrase
+        ssh-keygen -p -P "$(cat ~/.ssh/passphrase)" -N "" -f ~/.ssh/id_rsa
+
     - name: Executing remote ssh commands
       uses: appleboy/ssh-action@master
       with:
@@ -16,5 +28,5 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          cd ~/eveningnews/  # Замените на путь к вашему репозиторию
+          cd path/to/your/repo
           git pull
