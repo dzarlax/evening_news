@@ -1,0 +1,20 @@
+name: SSH Remote Pull
+
+on:
+  push:
+    branches:
+      - main  # Или другая ветка, которую вы хотите отслеживать
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Executing remote ssh commands
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd ~/evening_news/  # Замените на путь к вашему репозиторию
+          git pull
