@@ -1,8 +1,8 @@
 from xml.etree import ElementTree as ET
 import datetime
 import requests
-from openai import OpenAI
-
+import vertexai
+from vertexai.preview.generative_models import GenerativeModel, ChatSession
 import os
 import json
 from typing import Optional
@@ -26,8 +26,18 @@ def load_config(key: Optional[str] = None):
         return config  # Возвращаем весь конфигурационный словарь
 
 
+from google.oauth2 import service_account
+google_credentials_file = 'secret.json'
+credentials = service_account.Credentials.from_service_account_file(
+    google_credentials_file, scopes=['https://www.googleapis.com/auth/cloud-platform']
+)
+vertexai.init(project=load_config('project_id'), location=load_config('region'), credentials=credentials)
+
+
+
 # Здесь должен быть ваш OpenAI API ключ
-client = OpenAI(api_key=load_config("openai_token"))
+model = GenerativeModel("gemini-pro")
+chat = model.start_chat()
 
 def fetch_news_titles(url):
     response = requests.get(url)
@@ -53,26 +63,16 @@ def process_titles_with_gpt(titles_text):
             "номеров пунктов. Для каждого заголовка новости используйте "
             "тег <i>.  Все ссылки на статьи должны быть представлены в виде гиперссылок с помощью тега <a>, "
             "добавив в начало каждой ссылки 'https://dzarlax.dev/rss/articles/article.html?link='. Оформите каждую "
-            "ссылку как кнопку, используя соответствующий HTML-код для кнопок, с названием источника новости. "
+            "ссылку как кнопку, используя <a href>, с названием источника новости. "
             "Группируйте ссылки рядом с соответствующими заголовками, если новости похожи по теме. Используйте "
             "перенос строки <br> для разделения разных новостей. Обработать нужно все новости, не обрезай. Вот пары заголовков и ссылок: " + titles_text
     )
-    response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "Ты ассистент русскоязычного руководителя"},
-            {"role": "user", "content": prompt_text},
-        ]
-    )
+    print(prompt_text)
 
-    # Проверьте, является ли 'response' словарём или объектом
-    # Если 'response' - это словарь (как показано в вашем примере ошибки), используйте код ниже:
-    if isinstance(response, dict):
-        summary = response['choices'][0]['message']['content']
-    # Если 'response' - это объект, попробуйте использовать точечную нотацию:
-    else:
-        summary = response.choices[0].message.content
-    print(summary)
+    def get_chat_response(chat: ChatSession, prompt: str) -> str:
+        response = chat.send_message(prompt)
+        return response.text
+    summary = get_chat_response(chat,prompt_text)
     return summary
 
 def send_error(message):

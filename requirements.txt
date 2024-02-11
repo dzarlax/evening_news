@@ -3,3 +3,4 @@ requests
 openai
 typing
 BeautifulSoup4
+google-cloud-aiplatform
