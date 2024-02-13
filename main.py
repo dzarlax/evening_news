@@ -29,10 +29,12 @@ def load_config(key: Optional[str] = None):
 # Здесь должен быть ваш OpenAI API ключ
 client = OpenAI(api_key=load_config("openai_token"))
 
+
 def fetch_news_titles(url):
     response = requests.get(url)
     root = ET.fromstring(response.content)
     today = datetime.datetime.now().date()
+    yesterday = today - datetime.timedelta(days=1)
     titles_today = []
 
     for item in root.findall('.//item'):
@@ -49,16 +51,10 @@ def fetch_news_titles(url):
 
 def process_titles_with_gpt(titles_text):
     prompt_text = (
-            "Обобщите заголовки следующих новостей, представив их в виде сводки за день на русском. Используйте тег <b> для выделения "
-            "номеров пунктов. Для каждого заголовка новости используйте "
-            "тег <i>.  Все ссылки на статьи должны быть представлены в виде гиперссылок с помощью тега <a>, "
-            "добавив в начало каждой ссылки 'https://dzarlax.dev/rss/articles/article.html?link='. Оформите каждую "
-            "ссылку как кнопку, используя соответствующий HTML-код для кнопок, с названием источника новости. "
-            "Группируйте ссылки рядом с соответствующими заголовками, если новости похожи по теме. Используйте "
-            "перенос строки <br> для разделения разных новостей. Обработать нужно все новости, не обрезай. Вот пары заголовков и ссылок: " + titles_text
+            "Создайте сводку дня, обобщив следующие заголовки новостей на русском языке. Выделите номер каждой новости жирным шрифтом с помощью тега <b>. Для заголовков новостей используйте курсив с помощью тега <i>. Все ссылки на статьи должны быть представлены в виде гиперссылок, преобразованных в кнопки, с добавлением к URL 'https://dzarlax.dev/rss/articles/article.html?link=' и использованием тега <a href>, где название источника новости будет отображаться как название кнопки. Группируйте ссылки вместе с соответствующими заголовками по тематическому принципу. Разделите разные новости тегом переноса строки <br>. Обработайте все предоставленные новости без сокращений. Вот список заголовков и соответствующих ссылок: " + titles_text
     )
     response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
-        model="gpt-4",
+        model="gpt-4-0125-preview",
         messages=[
             {"role": "system", "content": "Ты ассистент русскоязычного руководителя"},
             {"role": "user", "content": prompt_text},
@@ -75,27 +71,29 @@ def process_titles_with_gpt(titles_text):
     print(summary)
     return summary
 
+
 def send_error(message):
-    TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
-    TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
-    send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    telegram_token = load_config("TELEGRAM_BOT_TOKEN")
+    telegram_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
+    send_message_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
     data = {
-        "chat_id": TELEGRAM_CHAT_ID,
+        "chat_id": telegram_chat_id,
         "text": message
     }
     response = requests.post(send_message_url, data=data)
 
+
 def send_telegram_message(message):
     # Place your Telegram bot's API token here
-    TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
+    telegram_token = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
-    TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
-    #TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
-    send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    #telegram_chat_id = load_config("TELEGRAM_CHAT_ID")
+    telegram_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
+    send_message_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
     data = {
         "parse_mode": "HTML",
         "disable_web_page_preview": "true",
-        "chat_id": TELEGRAM_CHAT_ID,
+        "chat_id": telegram_chat_id,
         "text": message,
         "Content-Type": "application/json"
     }
@@ -110,6 +108,7 @@ def send_telegram_message(message):
         send_error(f"Произошла ошибка при отправке сообщения: {e}")
     send_error(response.json())
     return response.json()
+
 
 def clean_html(html):
     # Разбираем HTML
@@ -134,4 +133,6 @@ def job():
     print(summary)
     cleaned_html = clean_html(summary)
     send_telegram_message(cleaned_html)
+
+
 job()

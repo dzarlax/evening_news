@@ -7,11 +7,12 @@ import os
 import json
 from typing import Optional
 from bs4 import BeautifulSoup
+from google.oauth2 import service_account
 
+current_directory = os.path.dirname(os.path.abspath(__file__))
 
 def load_config(key: Optional[str] = None):
     # Получение абсолютного пути к директории, где находится main.py
-    current_directory = os.path.dirname(os.path.abspath(__file__))
     # Объединение этого пути с именем файла, который вы хотите открыть
     file_path = os.path.join(current_directory, "config.json")
 
@@ -26,16 +27,11 @@ def load_config(key: Optional[str] = None):
         return config  # Возвращаем весь конфигурационный словарь
 
 
-from google.oauth2 import service_account
-google_credentials_file = 'secret.json'
+google_credentials_file = os.path.join(os.getcwd(), 'secret.json')
 credentials = service_account.Credentials.from_service_account_file(
     google_credentials_file, scopes=['https://www.googleapis.com/auth/cloud-platform']
 )
 vertexai.init(project=load_config('project_id'), location=load_config('region'), credentials=credentials)
-
-
-
-# Здесь должен быть ваш OpenAI API ключ
 model = GenerativeModel("gemini-pro")
 chat = model.start_chat()
 
@@ -43,12 +39,13 @@ def fetch_news_titles(url):
     response = requests.get(url)
     root = ET.fromstring(response.content)
     today = datetime.datetime.now().date()
+    yesterday = today - datetime.timedelta(days=1)
     titles_today = []
 
     for item in root.findall('.//item'):
         pub_date = item.find('pubDate').text
         pub_date = datetime.datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z').date()
-        if pub_date == today:
+        if pub_date == yesterday:
             title = item.find('title').text
             link = item.find('link').text
             titles_today.append((title, link))
@@ -59,13 +56,7 @@ def fetch_news_titles(url):
 
 def process_titles_with_gpt(titles_text):
     prompt_text = (
-            "Обобщите заголовки следующих новостей, представив их в виде сводки за день на русском. Используйте тег <b> для выделения "
-            "номеров пунктов. Для каждого заголовка новости используйте "
-            "тег <i>.  Все ссылки на статьи должны быть представлены в виде гиперссылок с помощью тега <a>, "
-            "добавив в начало каждой ссылки 'https://dzarlax.dev/rss/articles/article.html?link='. Оформите каждую "
-            "ссылку как кнопку, используя <a href>, с названием источника новости. "
-            "Группируйте ссылки рядом с соответствующими заголовками, если новости похожи по теме. Используйте "
-            "перенос строки <br> для разделения разных новостей. Обработать нужно все новости, не обрезай. Вот пары заголовков и ссылок: " + titles_text
+            "Создайте сводку дня, обобщив следующие заголовки новостей на русском языке. Выделите номер каждой новости жирным шрифтом с помощью тега <b>. Для заголовков новостей используйте курсив с помощью тега <i>. Все ссылки на статьи должны быть представлены в виде гиперссылок, преобразованных в кнопки, с добавлением к URL 'https://dzarlax.dev/rss/articles/article.html?link=' и использованием тега <a href>, где название источника новости будет отображаться как название кнопки. Группируйте ссылки вместе с соответствующими заголовками по тематическому принципу. Разделите разные новости тегом переноса строки <br>. Обработайте все предоставленные новости без сокращений. Вот список заголовков и соответствующих ссылок:" + titles_text
     )
     print(prompt_text)
 
@@ -89,8 +80,8 @@ def send_telegram_message(message):
     # Place your Telegram bot's API token here
     TELEGRAM_TOKEN = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
-    TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
-    #TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
+    #TELEGRAM_CHAT_ID = load_config("TELEGRAM_CHAT_ID")
+    TELEGRAM_CHAT_ID = load_config("TEST_TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
         "parse_mode": "HTML",
