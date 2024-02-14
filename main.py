@@ -87,8 +87,8 @@ def send_telegram_message(message):
     # Place your Telegram bot's API token here
     telegram_token = load_config("TELEGRAM_BOT_TOKEN")
     # Place your own Telegram user ID here
-    #telegram_chat_id = load_config("TELEGRAM_CHAT_ID")
-    telegram_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
+    telegram_chat_id = load_config("TELEGRAM_CHAT_ID")
+    #telegram_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
     data = {
         "parse_mode": "HTML",
