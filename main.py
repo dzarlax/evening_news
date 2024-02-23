@@ -5,6 +5,7 @@ from openai import OpenAI
 
 import os
 import json
+import time
 from typing import Optional
 from bs4 import BeautifulSoup
 
@@ -84,30 +85,29 @@ def send_error(message):
 
 
 def send_telegram_message(message):
-    # Place your Telegram bot's API token here
     telegram_token = load_config("TELEGRAM_BOT_TOKEN")
-    # Place your own Telegram user ID here
     telegram_chat_id = load_config("TELEGRAM_CHAT_ID")
     #telegram_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
     send_message_url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+
     data = {
         "parse_mode": "HTML",
         "disable_web_page_preview": "true",
         "chat_id": telegram_chat_id,
         "text": message,
-        "Content-Type": "application/json"
     }
+
     try:
         response = requests.post(send_message_url, data=data)
-        response.raise_for_status()  # Вызывает исключение для неудачных HTTP-запросов
-        if response.status_code == 200:
-            send_error("Сообщение успешно отправлено")
-        else:
-            send_error(f"Ошибка при отправке сообщения: {response.status_code}")
+        response.raise_for_status()  # Вызовет исключение для статусов HTTP, отличных от 200
+
+        # Возвращает JSON ответа, который должен содержать 'ok': True, если сообщение было успешно отправлено
+        return response.json()
     except requests.RequestException as e:
         send_error(f"Произошла ошибка при отправке сообщения: {e}")
-    send_error(response.json())
-    return response.json()
+
+        # Возвращаем словарь с 'ok': False в случае неудачи, чтобы отражать результат
+        return {"ok": False, "error": str(e)}
 
 
 def clean_html(html):
@@ -128,11 +128,33 @@ def clean_html(html):
 
 def job():
     url = load_config("feed_url")
-    today_titles = fetch_news_titles(url)
-    summary = process_titles_with_gpt(today_titles)
-    print(summary)
-    cleaned_html = clean_html(summary)
-    send_telegram_message(cleaned_html)
+    max_retries = 3  # Максимальное количество попыток
+    retries = 0
+
+    while retries < max_retries:
+        try:
+            # Загрузка и обработка заголовков новостей
+            today_titles = fetch_news_titles(url)
+            summary = process_titles_with_gpt(today_titles)
+            cleaned_html = clean_html(summary)
+
+            # Попытка отправки сообщения
+            response = send_telegram_message(cleaned_html)
+            # Проверка успешности отправки
+            if response.get('ok'):
+                send_error("Сообщение успешно отправлено")
+                break  # Выход из цикла, если отправка успешна
+            else:
+                raise Exception("Telegram API не подтвердило успешную отправку")
+        except Exception as e:
+            send_error(f"Произошла ошибка при отправке сообщения: {e}")
+            retries += 1
+            if retries < max_retries:
+                send_error("Попытка повторной отправки...")
+                time.sleep(5)  # Задержка перед следующей попыткой
+            else:
+                send_error("Превышено максимальное количество попыток отправки")
+                break
 
 
 job()
