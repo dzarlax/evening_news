@@ -127,8 +127,6 @@ def html4tg(result):
 
 def create_telegraph_page_with_library(result, access_token, author_name="Dzarlax", author_url="https://dzarlax.dev"):
     telegraph = Telegraph(access_token=access_token)
-
-    # Подготовка контента страницы в HTML
     # Подготовка контента страницы в HTML, используя только разрешенные теги
     content_html = ""
     for category, group in result.groupby('category'):
@@ -153,14 +151,22 @@ def create_telegraph_page_with_library(result, access_token, author_name="Dzarla
 
 
 # Подготовка и отправка сообщения
-def prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_token):
+def prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_token, service_chat_id):
     if len(html4tg(result)) <= 4096:
         # Если длина сообщения не превышает 4096 символов, отправляем напрямую через Telegram
         response = send_telegram_message(html4tg(result), chat_id, telegram_token)
+        if response.get('ok'):
+            send_telegram_message("Сообщение успешно отправлено", service_chat_id, telegram_token)
+        else:
+            send_telegram_message("Произошла ошибка при отправке", service_chat_id, telegram_token)
     else:
         telegraph_url = create_telegraph_page_with_library(result, telegraph_access_token)
         message = f"Сегодня много новостей, поэтому они спрятаны по ссылочке: {telegraph_url}"
         response = send_telegram_message(message, chat_id, telegram_token)
+        if response.get('ok'):
+            send_telegram_message("Сообщение успешно отправлено", service_chat_id, telegram_token)
+        else:
+            send_telegram_message("Произошла ошибка при отправке", service_chat_id, telegram_token)
     return response
 
 
@@ -168,6 +174,7 @@ def job():
     model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
     tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
     chat_id = load_config("TELEGRAM_CHAT_ID")
+    service_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
     telegram_token = load_config("TELEGRAM_BOT_TOKEN")
     telegraph_access_token = load_config("TELEGRAPH_ACCESS_TOKEN")
     data = fetch_and_parse_rss_feed("https://s3.dzarlax.dev/feed_300.xml")
@@ -177,7 +184,7 @@ def job():
     data = data[data['pubDate'] == data['today']].drop(columns=['today', 'pubDate'])
     data['category'] = generate_summary_batch(data['headline'].tolist(), tokenizer, model, batch_size=4)
     result = deduplication(data)
-    response = prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_token)
+    response = prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_token, service_chat_id)
     print(response)
 
 
