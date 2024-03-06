@@ -16,6 +16,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from telegraph import Telegraph
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
+model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
+tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
+
 
 def load_config(key: Optional[str] = None):
     # Получение абсолютного пути к директории, где находится main.py
@@ -84,7 +87,6 @@ def deduplication(data):
     cols_for_deduplication = [col for col in result.columns if col != 'links']
     result = result.drop_duplicates(subset=cols_for_deduplication)
     return result
-# Предположим, что `result` - это ваш итоговый DataFrame
 
 
 def escape_html(text):
@@ -100,8 +102,6 @@ def format_html_telegram(row):
     # Формирование строки HTML для заголовка и списка ссылок
     links_html = '\n'.join(links_formatted)
     return f"{headline}\n{links_html}\n"
-
-# Функция отправки сообщения через Telegram
 
 
 def send_telegram_message(message, chat_id, telegram_token):
@@ -171,12 +171,12 @@ def prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_t
 
 
 def job():
-    model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
-    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
     chat_id = load_config("TELEGRAM_CHAT_ID")
     service_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
     telegram_token = load_config("TELEGRAM_BOT_TOKEN")
     telegraph_access_token = load_config("TELEGRAPH_ACCESS_TOKEN")
+
+    # Получаем данные фида
     data = fetch_and_parse_rss_feed("https://s3.dzarlax.dev/feed_300.xml")
 
     # Преобразование и фильтрация данных
@@ -184,6 +184,7 @@ def job():
     data = data[data['pubDate'] == data['today']].drop(columns=['today', 'pubDate'])
     data['category'] = generate_summary_batch(data['headline'].tolist(), tokenizer, model, batch_size=4)
     result = deduplication(data)
+
     response = prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_token, service_chat_id)
     print(response)
 
