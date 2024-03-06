@@ -3,6 +3,7 @@
 import datetime
 import json
 import os
+import sys
 from typing import Optional
 from urllib.parse import urlparse
 from xml.etree import ElementTree as ET
@@ -18,6 +19,15 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
 tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
+
+if len(sys.argv) > 1:
+    # Значение первого аргумента сохраняется в переменную
+    infra = sys.argv[1]
+    # Теперь вы можете использовать переменную в вашем скрипте
+    print(f"Переданное значение переменной: {infra}")
+else:
+    infra = 'prod'
+    print("Аргумент не был передан.")
 
 
 def load_config(key: Optional[str] = None):
@@ -171,7 +181,11 @@ def prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_t
 
 
 def job():
-    chat_id = load_config("TELEGRAM_CHAT_ID")
+    if infra == 'prod':
+        chat_id = load_config("TELEGRAM_CHAT_ID")
+    elif infra == 'test':
+        chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
+
     service_chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
     telegram_token = load_config("TELEGRAM_BOT_TOKEN")
     telegraph_access_token = load_config("TELEGRAPH_ACCESS_TOKEN")
