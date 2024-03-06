@@ -167,7 +167,7 @@ def prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_t
 def job():
     model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
     tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
-    chat_id = load_config("TEST_TELEGRAM_CHAT_ID")
+    chat_id = load_config("TELEGRAM_CHAT_ID")
     telegram_token = load_config("TELEGRAM_BOT_TOKEN")
     telegraph_access_token = load_config("TELEGRAPH_ACCESS_TOKEN")
     data = fetch_and_parse_rss_feed("https://s3.dzarlax.dev/feed_300.xml")
