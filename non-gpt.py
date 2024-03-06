@@ -61,7 +61,7 @@ def generate_summary_batch(input_texts: list, tokenizer: T5Tokenizer, model: T5F
     summaries = []
     for i in range(0, len(input_texts), batch_size):
         batch_texts = input_texts[i:i+batch_size]
-        batch_prompts = ["Select one best category for news headline " + text for text in batch_texts]
+        batch_prompts = ["Answer with one best category for news headline " + text for text in batch_texts]
         input_ids = tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True, max_length=512).input_ids
         outputs = model.generate(input_ids, max_length=50, num_return_sequences=1)
         batch_summaries = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
