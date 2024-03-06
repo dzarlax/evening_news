@@ -4,3 +4,16 @@ openai
 typing
 BeautifulSoup4
 google-cloud-aiplatform
+tokenizers
+torch
+torchaudio
+torchvision
+tqdm
+transformers
+typing-extensions
+tzdata
+tzlocal
+urllib3
+scikit-learn
+scipy
+telegraph
