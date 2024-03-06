@@ -17,3 +17,4 @@ urllib3
 scikit-learn
 scipy
 telegraph
+pandas
