@@ -8,6 +8,7 @@ from typing import Optional
 from urllib.parse import urlparse
 from xml.etree import ElementTree as ET
 
+from openai import OpenAI
 import pandas as pd
 import requests
 from scipy.sparse import csr_matrix
@@ -17,8 +18,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from telegraph import Telegraph
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 
-model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
-tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
+# model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-base")
+# tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-base")
 
 if len(sys.argv) > 1:
     # Значение первого аргумента сохраняется в переменную
@@ -57,17 +58,48 @@ def fetch_and_parse_rss_feed(url: str) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-def generate_summary_batch(input_texts: list, tokenizer: T5Tokenizer, model: T5ForConditionalGeneration, batch_size: int = 4) -> list:
+# def generate_summary_batch(input_texts: list, tokenizer: T5Tokenizer, model: T5ForConditionalGeneration, batch_size: int = 4) -> list:
+#     summaries = []
+#     for i in range(0, len(input_texts), batch_size):
+#         batch_texts = input_texts[i:i+batch_size]
+#         batch_prompts = ["Write one best category for news headline " + text for text in batch_texts]
+#         input_ids = tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True, max_length=512).input_ids
+#         outputs = model.generate(input_ids, max_length=50, num_return_sequences=1)
+#         batch_summaries = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+#         summaries.extend(batch_summaries)
+#     return summaries
+
+def generate_summary_batch(input_texts: list, batch_size: int = 4, ) -> list:
     summaries = []
     for i in range(0, len(input_texts), batch_size):
-        batch_texts = input_texts[i:i+batch_size]
-        batch_prompts = ["Answer with one best category for news headline " + text for text in batch_texts]
-        input_ids = tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True, max_length=512).input_ids
-        outputs = model.generate(input_ids, max_length=50, num_return_sequences=1)
-        batch_summaries = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
-        summaries.extend(batch_summaries)
-    return summaries
+        batch_texts = input_texts[i:i + batch_size]
+        batch_prompts = ["Определите одну наилучшую категорию для заголовка новости: " + text for text in batch_texts]
+        for prompt in batch_prompts:
+            summary = process_with_gpt(prompt)
+            print(summary)
+            summaries.append(summary)
 
+    return summaries
+def process_with_gpt(text):
+    prompt_text = (text)
+    print(text)
+    client = OpenAI(api_key=load_config("openai_token"))
+    response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
+        model="gpt-3.5-turbo-0125",
+        messages=[
+            {"role": "system", "content": "В ответе должно быть только одно слово"},
+            {"role": "user", "content": prompt_text},
+        ]
+    )
+    # Проверьте, является ли 'response' словарём или объектом
+    # Если 'response' - это словарь (как показано в вашем примере ошибки), используйте код ниже:
+    if isinstance(response, dict):
+        summary = response['choices'][0]['message']['content']
+    # Если 'response' - это объект, попробуйте использовать точечную нотацию:
+    else:
+        summary = response.choices[0].message.content
+    print(summary)
+    return summary
 
 def deduplication(data):
     # Вычисление TF-IDF и косинусного сходства
@@ -130,7 +162,7 @@ def html4tg(result):
     html_output_telegram = ""
     for category, group in result.groupby('category'):
         category_html = category.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        html_output_telegram += f"<b>{category_html}</b>\n"
+        html_output_telegram += f"\n\n<b>{category_html}</b>\n\n"
         html_output_telegram += '\n'.join(group.apply(format_html_telegram, axis=1))
     return html_output_telegram
 
@@ -196,9 +228,9 @@ def job():
     # Преобразование и фильтрация данных
     data['today'] = datetime.datetime.now().date()
     data = data[data['pubDate'] == data['today']].drop(columns=['today', 'pubDate'])
-    data['category'] = generate_summary_batch(data['headline'].tolist(), tokenizer, model, batch_size=4)
+    #data['category'] = generate_summary_batch(data['headline'].tolist(), tokenizer, model, batch_size=4)
+    data['category'] = generate_summary_batch(data['headline'].tolist(), batch_size=4)
     result = deduplication(data)
-
     response = prepare_and_send_message(result, chat_id, telegram_token, telegraph_access_token, service_chat_id)
     print(response)
 
