@@ -12,4 +12,5 @@ jobs:
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          python3 non-gpt.py prod
+          source evening_news/evening_news/bin/activate
+          python3 evening_news/non-gpt.py prod
