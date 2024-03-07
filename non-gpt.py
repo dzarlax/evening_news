@@ -76,18 +76,16 @@ def generate_summary_batch(input_texts: list, batch_size: int = 4, ) -> list:
         batch_prompts = ["Определите одну наилучшую категорию для заголовка новости: " + text for text in batch_texts]
         for prompt in batch_prompts:
             summary = process_with_gpt(prompt)
-            print(summary)
             summaries.append(summary)
 
     return summaries
 def process_with_gpt(text):
     prompt_text = (text)
-    print(text)
     client = OpenAI(api_key=load_config("openai_token"))
     response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
-        model="gpt-3.5-turbo-0125",
+        model="gpt-4-0125-preview",
         messages=[
-            {"role": "system", "content": "В ответе должно быть только одно слово"},
+            {"role": "system", "content": "В ответе должно быть только одна категория из этих: Бизнес, Технологи, Наука, Сербия, Другое"},
             {"role": "user", "content": prompt_text},
         ]
     )
@@ -98,7 +96,6 @@ def process_with_gpt(text):
     # Если 'response' - это объект, попробуйте использовать точечную нотацию:
     else:
         summary = response.choices[0].message.content
-    print(summary)
     return summary
 
 def deduplication(data):
@@ -173,7 +170,7 @@ def create_telegraph_page_with_library(result, access_token, author_name="Dzarla
     content_html = ""
     for category, group in result.groupby('category'):
         # Используем <h3> для заголовков категорий, т.к. <h2> в списке запрещённых
-        content_html += f"<h3>{category}</h3>\n"
+        content_html += f"<hr><h3>{category}</h3>\n"
 
         for _, row in group.iterrows():
             article_title = row['headline']
