@@ -85,7 +85,7 @@ def process_with_gpt(text):
     response = client.chat.completions.create(  # Используйте 'completions.create' для получения ответа
         model="gpt-4-0125-preview",
         messages=[
-            {"role": "system", "content": "В ответе должно быть только одна категория из этих: Бизнес, Технологи, Наука, Сербия, Другое"},
+            {"role": "system", "content": "В ответе должно быть только одна категория из этих: Бизнес, Технологии, Наука, Сербия, Другое"},
             {"role": "user", "content": prompt_text},
         ]
     )
@@ -170,14 +170,14 @@ def create_telegraph_page_with_library(result, access_token, author_name="Dzarla
     content_html = ""
     for category, group in result.groupby('category'):
         # Используем <h3> для заголовков категорий, т.к. <h2> в списке запрещённых
-        content_html += f"<hr><h3>{category}</h3>\n"
+        content_html += f"<hr><h3>{category}</h3>"
 
         for _, row in group.iterrows():
             article_title = row['headline']
             # Формирование списка ссылок в <ul>
-            links_html = ''.join([f'<li><a href=https://dzarlax.dev/rss/articles/article.html?link={link}>{urlparse(link).netloc}</a></li>' for link in row['links']])
+            links_html = ''.join([f'<a href=https://dzarlax.dev/rss/articles/article.html?link={link}>{urlparse(link).netloc}</a>' for link in row['links']])
             # Заголовки статей оборачиваем в <p> и добавляем к ним список ссылок
-            content_html += f"<p>{article_title}</p>\n<ul>{links_html}</ul>\n"
+            content_html += f"<ul><p>{article_title}  {links_html}</p></ul>\n"
 
     # Создание страницы на Telegra.ph
     response = telegraph.create_page(
