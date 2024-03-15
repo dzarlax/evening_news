@@ -1,0 +1,14 @@
+datetime
+requests
+openai
+typing
+BeautifulSoup4
+tqdm
+typing-extensions
+tzdata
+tzlocal
+urllib3
+scikit-learn
+scipy
+telegraph
+pandas
