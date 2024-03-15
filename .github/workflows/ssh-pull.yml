@@ -19,4 +19,3 @@ jobs:
           cd ~/evening_news/  # Замените на путь к вашему репозиторию
           git pull
           source evening_news/bin/activate
-          python3 non-gpt.py test
